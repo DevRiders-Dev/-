@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عجلة التحديات العائلية</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #fceabb;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-top: 20px;
+        }
+        
+        canvas {
+            max-width: 90%;
+            height: auto;
+        }
+        
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #e68900;
+        }
+        
+        .player-list {
+            margin: 20px;
+        }
+        
+        .player-item {
+            display: inline-block;
+            background: #fff3cd;
+            padding: 5px 10px;
+            margin: 5px;
+            border-radius: 8px;
+            border: 1px solid #ffc107;
+        }
+        
+        .player-item button {
+            background: red;
+            color: white;
+            border: none;
+            padding: 3px 6px;
+            margin-left: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        input {
+            padding: 8px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🎯 عجلة التحديات العائلية</h1>
+
+    <canvas id="wheel" width="500" height="500"></canvas><br>
+    <button onclick="spinWheel()">🎡 لف العجلة</button>
+
+    <h3 id="current-player"></h3>
+    <h2 id="result"></h2>
+
+    <div>
+        <input type="text" id="playerName" placeholder="أدخل اسم اللاعب">
+        <button onclick="addPlayer()">➕ إضافة لاعب</button>
+    </div>
+    <div class="player-list" id="playersList"></div>
+
+    <audio id="spinSound" src="https://www.soundjay.com/misc/sounds/spin-01a.mp3"></audio>
+
+    <script>
+        const challenges = [
+            "مثل مشهد من فيلم كرتون 🎬",
+            "غني أغنية أطفال 🎵",
+            "قفز 10 مرات متتالية 🦘",
+            "ارسم قطة في 30 ثانية 🐱",
+            "جاوب على سؤال ثقافي بسيط 📚",
+            "العب تمثال لمدة 20 ثانية 🗿",
+            "قلد صوت حيوان 🐒",
+            "غني وانت مغمض 👀",
+            "قول اسم 5 فواكه في 5 ثواني 🍎🍌",
+            "🎁 خذ قطعة شوكولاتة",
+            "🎁 اختر لاعبًا آخر ليعمل التحدي بدلاً منك",
+            "غني اسمك بطريقة مضحكة 🤪",
+            "العب إيدك كأنها دمية 🖐️",
+            "مثل إنك سوبرمان 🦸‍♂️",
+            "قول نكتة للأطفال 😂",
+            "امشي في خط مستقيم وانت مغمض 👣",
+            "اكتب اسمك بالهواء باستخدام أنفك 👃",
+            "قل جملة مقلوبة من الآخر للأول 🔄",
+            "ارسم بيت في 20 ثانية 🏠",
+            "صفق 15 مرة بسرعة 👏"
+        ];
+
+        let players = [];
+        let currentPlayerIndex = 0;
+
+        const canvas = document.getElementById("wheel");
+        const ctx = canvas.getContext("2d");
+        const spinSound = document.getElementById("spinSound");
+
+        function drawWheel() {
+            const numSegments = challenges.length;
+            const anglePerSegment = (2 * Math.PI) / numSegments;
+
+            for (let i = 0; i < numSegments; i++) {
+                const angle = i * anglePerSegment;
+                ctx.beginPath();
+                ctx.moveTo(250, 250);
+                ctx.arc(250, 250, 250, angle, angle + anglePerSegment);
+                ctx.fillStyle = i % 2 === 0 ? "#ffcc00" : "#ff6666";
+                ctx.fill();
+                ctx.save();
+                ctx.translate(250, 250);
+                ctx.rotate(angle + anglePerSegment / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "#000";
+                ctx.font = "16px Arial";
+                ctx.fillText(challenges[i], 230, 5);
+                ctx.restore();
+            }
+        }
+        drawWheel();
+
+        function spinWheel() {
+            if (players.length === 0) {
+                alert("⚠️ أضف لاعبين أولاً!");
+                return;
+            }
+            spinSound.play();
+            let spins = Math.floor(Math.random() * 10) + 10;
+            let anglePerSegment = (2 * Math.PI) / challenges.length;
+            let finalAngle = spins * 2 * Math.PI + Math.random() * 2 * Math.PI;
+
+            let duration = 3000;
+            let start = null;
+
+            function animate(timestamp) {
+                if (!start) start = timestamp;
+                let progress = timestamp - start;
+                let rotation = easeOut(progress / duration) * finalAngle;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.save();
+                ctx.translate(250, 250);
+                ctx.rotate(rotation);
+                ctx.translate(-250, -250);
+                drawWheel();
+                ctx.restore();
+
+                if (progress < duration) {
+                    requestAnimationFrame(animate);
+                } else {
+                    let winningIndex = Math.floor(((2 * Math.PI) - (rotation % (2 * Math.PI))) / anglePerSegment) % challenges.length;
+                    let player = players[currentPlayerIndex];
+                    document.getElementById("result").innerText = `🎯 التحدي لـ ${player}: ${challenges[winningIndex]}`;
+                    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+                    document.getElementById("current-player").innerText = `الدور على: ${players[currentPlayerIndex]}`;
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        function easeOut(t) {
+            return 1 - Math.pow(1 - t, 3);
+        }
+
+        function addPlayer() {
+            let name = document.getElementById("playerName").value.trim();
+            if (name) {
+                players.push(name);
+                document.getElementById("playerName").value = "";
+                updatePlayersList();
+                if (players.length === 1) {
+                    document.getElementById("current-player").innerText = `الدور على: ${players[0]}`;
+                }
+            }
+        }
+
+        function removePlayer(index) {
+            players.splice(index, 1);
+            updatePlayersList();
+            if (currentPlayerIndex >= players.length) currentPlayerIndex = 0;
+            if (players.length > 0) {
+                document.getElementById("current-player").innerText = `الدور على: ${players[currentPlayerIndex]}`;
+            } else {
+                document.getElementById("current-player").innerText = "";
+            }
+        }
+
+        function updatePlayersList() {
+            let list = document.getElementById("playersList");
+            list.innerHTML = "";
+            players.forEach((player, index) => {
+                list.innerHTML += `<span class="player-item">${player} <button onclick="removePlayer(${index})">❌</button></span>`;
+            });
+        }
+    </script>
+
+</body>
+
+</html>
